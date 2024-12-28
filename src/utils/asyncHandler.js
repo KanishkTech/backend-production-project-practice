@@ -1,6 +1,6 @@
 //step 1:u can use promise to resolve the function [source-chai aur code v-9]
 const asyncHandler = (fn)=>{
-    (rq,res,next)=>{
+    return (req,res,next)=>{
         Promise.resolve(fn(req,res,next)).catch((err)=>next(err));
     }
 }
