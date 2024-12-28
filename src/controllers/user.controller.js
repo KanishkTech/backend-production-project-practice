@@ -17,7 +17,7 @@ export const registerUser = asyncHandler(async (req, res, next) => {
   // return res
 
   const { fullName, email, username, password } = req.body;
-  console.log(email);
+//   console.log(email);
 
   if (
     [fullName, email, username, password].some((feild) => feild?.trim() === "") // here we are checking if any of the fields are empty and then we are throwing an error
@@ -28,7 +28,7 @@ export const registerUser = asyncHandler(async (req, res, next) => {
     throw new ApiError(400, "All fields are required");
   }
 
-  const existUser = User.findOne({
+  const existUser = await User.findOne({
     $or: [{ username }, { email }], // checking here if any of the fields are already present in the database then throw an error $or:[{},{}] work as or operator
   });
   if (existUser) {
@@ -36,11 +36,11 @@ export const registerUser = asyncHandler(async (req, res, next) => {
   }
 
   // check for coverImages, check for avatar
-
-  const avatarLocalPath = req.files?.avatar[0]?.path; //file ki local path access karna
+// console.log(req.files)
+  const avatarLocalPath = req.files?.avatar?.[0].path; //file ki local path access karna
   const coverLocalPath = req.files?.coverImage[0]?.path;
 
-  if (!avatarLocalPath) {
+  if (!avatarLocalPath ) {
     throw new ApiError(400, "Avatar file is required");
   }
 
@@ -48,7 +48,7 @@ export const registerUser = asyncHandler(async (req, res, next) => {
   const avatar = await uploadToCloudinary(avatarLocalPath);
   const coverImage = await uploadToCloudinary(coverLocalPath);
   if (!avatar) {
-    throw new ApiError(500, "Avatar upload failed its required");
+    throw new ApiError(500, "Avatar upload failed its required field");
   }
 
   const user = await User.create({
@@ -72,7 +72,7 @@ export const registerUser = asyncHandler(async (req, res, next) => {
         200,
         createdUser,
         "User created successfully",
-        
+
     )
   )
 
