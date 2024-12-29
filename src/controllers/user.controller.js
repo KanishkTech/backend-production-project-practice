@@ -233,8 +233,113 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
         )
       );
   } catch (error) {
-    throw new ApiError(401,error?.message || "Invalid REfreshToken token")
+    throw new ApiError(401, error?.message || "Invalid REfreshToken token");
   }
 });
 
-export { registerUser, loginUser, logoutUser ,refreshAccessToken};
+const changePassword = asyncHandler(async (req, res) => {
+  const { oldPassword, newPassword } = req.body;
+  const user = await User.findById(req.user?._id); //this req.user getting from our auth.middleware because first we checking user is exist or not by middleware
+  const isPasswordMatch = user.comparePassword(oldPassword);
+  if (!isPasswordMatch) {
+    throw new ApiError(400, "Invalid old password");
+  }
+  user.password = newPassword;
+  await user.save({ validationBeforeSave: false });
+
+  //and hashing password in user.model
+  return res
+    .status(200)
+    .json(new ApiResponse(200, {}, "Password changed successfully"));
+});
+
+const getCurrentUser = asyncHandler(async (req, res) => {
+  return res
+    .status(200)
+    .json(new ApiResponse(200, req.user, "Current User found successfully")); // because we added middleware where se sending the user from req
+});
+
+//plain text details update
+const updateDetails = asyncHandler(async (req, res) => {
+  const { fullName, email } = req.body;
+  if (!fullName || !email) {
+    throw new ApiError(400, "Please provide all fields");
+  }
+  const user = User.findByIdAndUpdate(
+    req.user?._id,
+    { $set: { fullName:fullName , email :email } },
+    { new: true } // This ensures the updated user document is returned
+  ).select("-password");
+  return res
+    .status(200)
+    .json(new ApiResponse(200, user, "User details updated successfully"));
+});
+
+
+const updateUserAvatar = asyncHandler(async (req, res) => {
+  const avatarLocalPath  = req.file?.path; // here we are getting the avatar from the req.file from multer
+
+  if(!avatarLocalPath){
+    throw new ApiError(400, "Avatar file is required");
+  }
+  const avatar = await uploadToCloudinary(avatarLocalPath);
+  if(!avatar.url){
+    throw new ApiError(500, "Avatar upload failed while uploading");
+  }
+
+  const user  = await User.findById(
+    req.user?._id,
+    {
+    $set:{
+      avatar: avatar.url
+    }
+  },
+  {
+    new :true
+  },
+).select("-password ");
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, user, "User avatar updated successfully"));
+
+})
+
+const updateUserCoverImage = asyncHandler(async (req, res) => {
+  const coverImageLocalPath  = req.file?.path; // here we are getting the avatar from the req.file from multer
+
+  if(!coverImageLocalPath){
+    throw new ApiError(400, "CoverImage file is required");
+  }
+  const coverImage = await uploadToCloudinary(coverImageLocalPath);
+  if(!coverImage.url){
+    throw new ApiError(500, "CoverImage upload failed while uploading");
+  }
+
+  const user =  await User.findById(
+    req.user?._id,
+    {
+    $set:{
+      coverImage: coverImage.url
+    }
+  },
+  {
+    new :true
+  },
+).select("-password ");
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, user, "User cover image updated successfully"));
+})
+export {
+  registerUser,
+  loginUser,
+  logoutUser,
+  refreshAccessToken,
+  changePassword,
+  getCurrentUser,
+  updateDetails,
+  updateUserAvatar,
+  updateUserCoverImage
+};
