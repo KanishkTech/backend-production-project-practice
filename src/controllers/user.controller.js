@@ -36,10 +36,19 @@ export const registerUser = asyncHandler(async (req, res, next) => {
   }
 
   // check for coverImages, check for avatar
-// console.log(req.files)
-  const avatarLocalPath = req.files?.avatar?.[0].path; //file ki local path access karna
-  const coverLocalPath = req.files?.coverImage[0]?.path;
+  // console.log("in req.files we get :- ",req.files);
+  const avatarLocalPath = req.files?.avatar[0]?.path; //file ki local path access karna
+  // const coverLocalPath = req.files?.coverImage[0]?.path;
 
+  let coverLocalPath ; 
+
+  // 1) req.files => Ensures that the files property exists in the req object
+  // 2) Array.isArray(req.files.coverImage) => Ensures that the coverImage property is an array 
+  // Arrays.isArray() is a method that checks if the given value is an array or not.
+  // 3) req.files.coverImage.length > 0 => Ensures that the coverImage array has at least one element
+  if(req.files && Array.isArray(req.files.coverImage) &&  req.files.coverImage.length > 0){
+    coverLocalPath = req.files.coverImage[0].path;
+  }
   if (!avatarLocalPath ) {
     throw new ApiError(400, "Avatar file is required");
   }
@@ -47,6 +56,7 @@ export const registerUser = asyncHandler(async (req, res, next) => {
   // upload them to cloudinary, avatar
   const avatar = await uploadToCloudinary(avatarLocalPath);
   const coverImage = await uploadToCloudinary(coverLocalPath);
+    // console.log(avatar);
   if (!avatar) {
     throw new ApiError(500, "Avatar upload failed its required field");
   }
