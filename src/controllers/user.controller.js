@@ -447,6 +447,9 @@ const getWatchedHistory = asyncHandler(async (req, res) => {
       }
     }
   ])
+  if(!user){
+    throw new ApiError(400, "User is missing");
+  }
 
   return res
     .status(200)
