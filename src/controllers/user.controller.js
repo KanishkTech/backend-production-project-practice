@@ -332,6 +332,131 @@ const updateUserCoverImage = asyncHandler(async (req, res) => {
     .status(200)
     .json(new ApiResponse(200, user, "User cover image updated successfully"));
 })
+
+const getUserChannelProfile = asyncHandler(async (req, res) => {
+
+  const { username } = req.params; // req.params means data coming from url 
+  // so here we are using aggregate pipeline to get the user details and the channel details it will return a array of channel
+  if(!username){
+    throw new ApiError(400, "Username is missing");
+  }
+
+  const channel = await User.aggregate([
+    {
+      $match: {
+        username: username?.toLowerCase(),
+
+      }
+    },
+    {
+      $lookup:{
+        from:"subscriptions",
+        localField:"_id",
+        foreignField:"channel",
+        as:"subscribers" // herre in this model we find the subscribers of the channel
+      }
+    },
+    {
+      $lookup:{
+        from:"subscriptions",
+        localField:"_id",
+        foreignField:"subscriber",
+        as:"subscribedTo" // here in this model we find :- how many  channels user subscribed to
+      }
+    },
+    {
+      $addFields:{ // here we are adding fields to the uesr model
+        subscriberCount:{
+          $size:"$subscribers" // here { $subcribers } $ tell us this is field
+        },
+        channelSubscribedToCount:{
+          $size:"$subscribedTo"
+        },
+        isSubscribed:{
+          $cond:{
+            if:{$in:[req.user?._id , "$subscribers.subscriber"]}, // here we are checking if the user is already subscribed to the channel or not
+            then:true,
+            else:false
+          }
+        }
+      }
+    },
+    {
+      $project:{ // here we are projecting the fields we want to show 
+      fullName:1,// 
+      username:1,
+      subscriberCount:1,
+      channelSubscribedToCount:1,
+      isSubscribed:1,
+      avatar:1,
+      coverImage:1,
+      email:1,
+
+      }
+    }
+  ])
+
+  if(!channel?.length){
+    throw new ApiError(404, "Channel not found");
+  }
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, channel[0], "User Channel found successfully"));
+})
+
+const getWatchedHistory = asyncHandler(async (req, res) => {
+  const user = await User.aggregate([
+    {
+      $match: {
+        _id: new mongoose.Types.ObjectId(req.user._id),
+      }
+    },
+    {
+      $lookup:{
+        from:"videos",
+        localField:"watchHistory",
+        foreignField:"_id",
+        as:"watchedVideos",
+        pipeline:[
+          {
+            $lookup:{
+              from:"users",
+              localField:"owner",
+              foreignField:"_id",
+              as:"owner",
+              pipeline:[
+                {
+                  $project:{
+                    fullName:1,
+                    username:1,
+                    avatar:1
+                  }
+                }
+              ]
+            }
+          },
+          {
+            $addFields:{
+              owner:{
+                first:"$owner",
+              }
+            }
+          }
+        ]
+      }
+    }
+  ])
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, user[0]?.watchHistory, "Watched history found successfully"));
+
+})
+
+
+
+
 export {
   registerUser,
   loginUser,
@@ -341,5 +466,7 @@ export {
   getCurrentUser,
   updateDetails,
   updateUserAvatar,
-  updateUserCoverImage
+  updateUserCoverImage,
+  getUserChannelProfile,
+  getWatchedHistory
 };
