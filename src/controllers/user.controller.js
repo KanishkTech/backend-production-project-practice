@@ -1,7 +1,7 @@
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/ApiError.js";
 import { User } from "../models/user.model.js";
-import { uploadToCloudinary } from "../utils/cloudinary.js";
+import { uploadToCloudinary , deleteFromCloudinary} from "../utils/cloudinary.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import jwt from "jsonwebtoken";
 import { response } from "express";
@@ -277,33 +277,37 @@ const updateDetails = asyncHandler(async (req, res) => {
 
 
 const updateUserAvatar = asyncHandler(async (req, res) => {
-  const avatarLocalPath  = req.file?.path; // here we are getting the avatar from the req.file from multer
+  const NewAvatarLocalPath = req.file?.path;
 
-  if(!avatarLocalPath){
+  if (! NewAvatarLocalPath) {
     throw new ApiError(400, "Avatar file is required");
   }
-  const avatar = await uploadToCloudinary(avatarLocalPath);
-  if(!avatar.url){
-    throw new ApiError(500, "Avatar upload failed while uploading");
-  }
 
-  const user  = await User.findById(
-    req.user?._id,
-    {
-    $set:{
-      avatar: avatar.url
+  try {
+    const avatar = await uploadToCloudinary( NewAvatarLocalPath);
+    if (!avatar.url) {
+      throw new ApiError(500, "Avatar upload failed while uploading");
     }
-  },
-  {
-    new :true
-  },
-).select("-password ");
 
-  return res
-    .status(200)
-    .json(new ApiResponse(200, user, "User avatar updated successfully"));
+ 
+    const oldAvatarUrl = req.user?.avatar;
 
-})
+
+    req.user.avatar = avatar.url;
+    const updatedUser = await req.user.save();
+
+    if (oldAvatarUrl) {
+      await deleteFromCloudinary(oldAvatarUrl);
+    }
+
+    return res.status(200).json(
+      new ApiResponse(200, updatedUser, "User avatar updated successfully")
+    );
+  } catch (error) {
+    console.error("Error updating avatar:", error);
+    throw new ApiError(500, "An error occurred while updating the avatar");
+  }
+});
 
 const updateUserCoverImage = asyncHandler(async (req, res) => {
   const coverImageLocalPath  = req.file?.path; // here we are getting the avatar from the req.file from multer
