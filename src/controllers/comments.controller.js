@@ -9,6 +9,20 @@ const getVideoComments = asyncHandler(async (req, res) => {
   //TODO: get all comments for a video
   const { videoId } = req.params;
   const { page = 1, limit = 10 } = req.query;
+  try {
+    if(!videoId){
+      throw new ApiError(400, "Video ID is required");
+    }
+    const video = await Video.findById(videoId);
+    if(!video){
+      throw new ApiError(404, "Video not found");
+    }
+    
+    
+  } catch (error) {
+    throw new ApiError(500, "Failed to get comments");
+  }
+
 });
 
 const addComment = asyncHandler(async (req, res) => {

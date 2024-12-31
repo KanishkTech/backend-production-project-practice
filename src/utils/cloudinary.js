@@ -16,7 +16,7 @@ const uploadToCloudinary = async (localFilePath) => {
       resource_type: "auto",
     });
     
-    console.log("FILE IS UPLOADED TO CLOUDINARY AND THIS WE GET IN CLODINARY ", upload);
+    // console.log("FILE IS UPLOADED TO CLOUDINARY AND THIS WE GET IN CLODINARY ", upload);
     fs.unlinkSync(localFilePath); //remove the locally  temporary saved file after uploading it to cloudinary
     return upload;
   } catch (err) {
@@ -31,12 +31,12 @@ const deleteFromCloudinary = async (oldCloudinaryImg) => {
 
     const oldImage = oldCloudinaryImg.split("/").pop().split(".")[0];
     const result = await cloudinary.uploader.destroy(oldImage);
-    console.log(result);
+    // console.log(result); //--> {result}
     if (result.result === "ok") {
-      console.log("Image deleted successfully:", result);
+      // console.log("Image deleted successfully:", result);
       return { success: true, message: "Image deleted successfully" };
     } else {
-      console.warn("Failed to delete image:", result);
+      // console.warn("Failed to delete image:", result);
       return { success: false, message: "Failed to delete image" };
     }
 
