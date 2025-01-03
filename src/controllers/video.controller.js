@@ -15,42 +15,37 @@ const publishAVideo = asyncHandler(async (req, res) => {
   const { title, description } = req.body;
   // TODO: get video, upload to cloudinary, create video
 
-try {
-    
-      if(!title||!description){
-        throw new ApiError(400, "Please provide title and description");
-      }
-    
-      const videoLocalPath = req.file?.path;
-      if(!videoLocalPath){
-        throw new ApiError(400, "Please provide a video");
-      }
-    
-      const video  = await uploadToCloudinary(videoLocalPath);
-    
-      if(!video){
-        throw new ApiError(400, "Failed to upload video to cloudinary");
-      }
-      const newVideo = await Video.create({
-        title,
-        description,
-        owner:req.user?._id,
-        videoFile:video.url,
-    
-      })
-    
-      if(!newVideo){
-        throw new ApiError(400, "Failed to publish video");
-      }
-      return res
+  try {
+    if (!title || !description) {
+      throw new ApiError(400, "Please provide title and description");
+    }
+
+    const videoLocalPath = req.file?.path;
+    if (!videoLocalPath) {
+      throw new ApiError(400, "Please provide a video");
+    }
+
+    const video = await uploadToCloudinary(videoLocalPath);
+
+    if (!video) {
+      throw new ApiError(400, "Failed to upload video to cloudinary");
+    }
+    const newVideo = await Video.create({
+      title,
+      description,
+      owner: req.user?._id,
+      videoFile: video.url,
+    });
+
+    if (!newVideo) {
+      throw new ApiError(400, "Failed to publish video");
+    }
+    return res
       .status(201)
       .json(new ApiResponse(201, "Video published successfully", newVideo));
-    
-    
-} catch (error) {
-    throw new ApiError("Failed to publish video", error.message)
-    
-}
+  } catch (error) {
+    throw new ApiError("Failed to publish video", error.message);
+  }
 });
 
 const getVideoById = asyncHandler(async (req, res) => {
@@ -114,43 +109,39 @@ const updateVideo = asyncHandler(async (req, res) => {
   if (!isValidObjectId(videoId)) {
     throw new ApiError(400, "Invalid video id");
   }
-try {
-    
-      const video = await Video.findone({ _id: videoId });
-      if (!video) {
-        throw new ApiError(404, "Video not found");
-      }
-      if (video.owner.toString() !== req.user?._id.toString()) {
-        throw new ApiError(400, "u cant do changes , your are not owner");
-      }
-    
-      const UpdateVideo = await Video.findByIdAndUpdate(
-        videoId,
-        {
-          $set: {
-            title: req.body.title,
-            description: req.body.description,
-            thumbnail: req.body.thumbnail,
-          },
+  try {
+    const video = await Video.findone({ _id: videoId });
+    if (!video) {
+      throw new ApiError(404, "Video not found");
+    }
+    if (video.owner.toString() !== req.user?._id.toString()) {
+      throw new ApiError(400, "u cant do changes , your are not owner");
+    }
+
+    const UpdateVideo = await Video.findByIdAndUpdate(
+      videoId,
+      {
+        $set: {
+          title: req.body.title,
+          description: req.body.description,
+          thumbnail: req.body.thumbnail,
         },
-        { new: true }
+      },
+      { new: true }
+    );
+
+    return res
+      .status(200)
+      .json(
+        new ApiResponse(
+          200,
+          UpdateVideo,
+          "Video Details are updated successfully"
+        )
       );
-    
-      return res
-        .status(200)
-        .json(
-          new ApiResponse(
-            200,
-            UpdateVideo,
-            "Video Details are updated successfully"
-          )
-        );
-} catch (error) {
-    throw new ApiError(
-        500,
-        error.message || "Error while updating video"  
-    )
-}
+  } catch (error) {
+    throw new ApiError(500, error.message || "Error while updating video");
+  }
 });
 
 const deleteVideo = asyncHandler(async (req, res) => {
@@ -177,18 +168,17 @@ const togglePublishStatus = asyncHandler(async (req, res) => {
 
   try {
     if (!isValidObjectId(videoId)) {
-        throw new ApiError(400, "Invalid video id");
+      throw new ApiError(400, "Invalid video id");
     }
     const video = await Video.findById(videoId);
     if (!video) {
-        throw new ApiError(404, "Video not found");
+      throw new ApiError(404, "Video not found");
     }
     video.isPublished = !video.isPublished;
     await video.save();
     return res
-    .status(200)
-    .json(new ApiResponse(200, "Video publish status updated successfully"));
-    
+      .status(200)
+      .json(new ApiResponse(200, "Video publish status updated successfully"));
   } catch (error) {
     throw new ApiError(500, "Error while toggle", error.message);
   }
