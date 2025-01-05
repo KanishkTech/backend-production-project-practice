@@ -9,6 +9,36 @@ import { uploadOnCloudinary } from "../utils/cloudinary.js";
 const getAllVideos = asyncHandler(async (req, res) => {
   const { page = 1, limit = 10, query, sortBy, sortType, userId } = req.query;
   //TODO: get all videos based on query, sort, pagination
+  const pageNumber = parseInt(page);
+  const pageLimit = parseInt(limit);
+
+  const sortOrder = sortType=== 'asc' ?1:-1;
+
+  let searchQuery={}
+  if(query){
+    searchQuery = {
+      $or:[
+        {title:{$regex:query,$options:'i'}},
+        {description:{$regex:query,$options:'i'}},
+      ]
+    };
+  }
+  try{
+    const videos = await Video.find(searchQuery)
+    .sort({ [sortBy]: sortOrder })
+    .skip((pageNumber - 1) * pageLimit)
+    .limit(pageLimit);
+
+    const totalVideos = await Video.countDocuments(searchQuery);
+    const totalPages = Math.ceil(totalVideos / pageLimit);
+
+    return res
+    .status(200)
+    .json(new ApiResponse(videos, {totalVideos, totalPages}));
+  }catch(error){
+    return next(new ApiError(500, 'Failed to get videos'))
+  }
+  
 });
 
 const publishAVideo = asyncHandler(async (req, res) => {
@@ -25,7 +55,7 @@ const publishAVideo = asyncHandler(async (req, res) => {
       throw new ApiError(400, "Please provide a video");
     }
 
-    const video = await uploadToCloudinary(videoLocalPath);
+    const video = await uploadOnCloudinary (videoLocalPath);
 
     if (!video) {
       throw new ApiError(400, "Failed to upload video to cloudinary");
